@@ -1,59 +1,100 @@
-#![feature(portable_simd)]
+#![feature(portable_simd, lazy_cell)]
 
+mod camera;
 mod color;
 mod hittable;
 mod ray;
 mod sphere;
 mod vec3;
 
+use crate::{color::Color, hittable::Obj};
+use camera::Camera;
 use hittable::HittableList;
-use ray::{Point3, Ray};
+use ray::Point3;
 use sphere::Sphere;
-use vec3::Vec3;
 
-use std::{fs::File, io::BufWriter, io::Write, ops::Mul, rc::Rc};
+use std::{
+    fs::File,
+    io::Write,
+    sync::{Arc, LazyLock},
+};
+
+use rayon::prelude::*;
+
+fn _random_f32(min: f32, max: f32) -> f32 {
+    let rng = fastrand::Rng::new();
+    rng.seed(42);
+    dbg!(rng.f32());
+
+    min + (max - min) * rng.f32()
+}
+
+const ASPECT_RATIO: f32 = 16. / 9.;
+const IMAGE_WIDTH: f32 = 400.0;
+
+static WORLD: LazyLock<HittableList> = LazyLock::new(|| {
+    let mut world = HittableList::default();
+
+    world.add(Arc::new(Obj::Sphere(Sphere::new(
+        Point3::new(0., 0., -1.),
+        0.5,
+    ))));
+
+    world.add(Arc::new(Obj::Sphere(Sphere::new(
+        Point3::new(0., -100.5, -1.),
+        100.0,
+    ))));
+
+    world
+});
 
 fn main() {
     // Image
-    let aspect_ratio = 16. / 9.;
-    let image_width = 400.;
-    let image_height = image_width / aspect_ratio;
+    let image_height = IMAGE_WIDTH / ASPECT_RATIO;
+    let samples_per_pixel = 10;
 
-    // World
-    let mut world: HittableList = HittableList::default();
-    world.add(Rc::new(Sphere::new(Point3::new(0., 0., -1.), 0.5)));
-    world.add(Rc::new(Sphere::new(Point3::new(0., -100.5, -1.), 100.0)));
-
-    // Camera
-    let viewport_height = 2.0;
-    let viewport_width = aspect_ratio * viewport_height;
-    let focal_length = 1.0;
-
-    let origin = Point3::new(0., 0., 0.);
-    let horizontal = Vec3::new(viewport_width, 0., 0.);
-    let vertical = Vec3::new(0., viewport_height, 0.);
-    let lower_left_corner =
-        origin - horizontal / 2. - vertical / 2. - Vec3::new(0., 0., focal_length);
+    // camera
+    let camera = Camera::new();
 
     // Write image
-    let mut file = BufWriter::with_capacity(10_000_000, File::create("./image.ppm").unwrap());
-    write!(&mut file, "P3\n{image_width} {image_height}\n255\n").unwrap();
+    let mut buf: Vec<u8> = Vec::with_capacity(100_000_000);
+    write!(&mut buf, "P3\n{IMAGE_WIDTH} {image_height}\n255\n").unwrap();
 
-    for j in (0..(image_height as usize)).rev() {
-        eprint!("\rScanlines remaining: {j}");
+    eprintln!(
+        "Pixels to generate:{}x{} =  {}",
+        IMAGE_WIDTH,
+        image_height,
+        IMAGE_WIDTH * image_height
+    );
 
-        for i in 0..(image_width as usize) {
-            let u = i as f32 / (image_width - 1.);
-            let v = j as f32 / (image_height - 1.);
+    let coords: Vec<_> = (0..(image_height as usize))
+        .rev()
+        .flat_map(|x| (0..(IMAGE_WIDTH as usize)).map(move |y| (x, y)))
+        .collect();
 
-            let r = Ray::new(
-                origin,
-                lower_left_corner + horizontal.mul(u) + vertical.mul(v) - origin,
-            );
+    let pixels: Vec<_> = coords
+        .into_par_iter()
+        .map(|(j, i)| {
+            let rng = fastrand::Rng::new();
+            let mut pixel_color = Color::default();
 
-            r.color(&world).write(&mut file);
-        }
+            for _ in 0..samples_per_pixel {
+                let u = (i as f32 + rng.f32()) / (IMAGE_WIDTH - 1.);
+                let v = (j as f32 + rng.f32()) / (image_height - 1.);
+                let r = camera.ger_ray(u, v);
+
+                pixel_color += r.color(&WORLD);
+            }
+
+            pixel_color
+        })
+        .collect();
+
+    for pixel_color in pixels.iter() {
+        pixel_color.write(&mut buf, samples_per_pixel);
     }
 
+    let mut file = File::create("./image.ppm").unwrap();
+    file.write_all(&buf).unwrap();
     file.flush().unwrap();
 }

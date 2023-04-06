@@ -28,7 +28,7 @@ impl Ray {
     /// the 3D line. For positive t, you get only the parts in front of A, and this is what is
     /// often called a half-line or ray.
     pub fn at(&self, t: f32) -> Point3 {
-        self.origin + self.direction.mul(t)
+        self.direction.mul_add_vec(t, self.origin)
     }
 }
 
@@ -38,8 +38,8 @@ impl Ray {
             (hit.normal + Color::new(1., 1., 1.)) * 0.5
         } else {
             let unit_direction = self.direction.unit_vector();
-            let t = (unit_direction.y + 1.) * 0.5;
-            Color::new(1., 1., 1.) * (1. - t) + Color::new(0.5, 0.7, 1.) * t
+            let t = (unit_direction.y() + 1.) * 0.5;
+            Color::new(1., 1., 1.).mul_add_vec(1. - t, Color::new(0.5, 0.7, 1.).mul(t))
         }
     }
 }

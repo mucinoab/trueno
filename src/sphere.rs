@@ -22,7 +22,8 @@ impl Hittable for Sphere {
         let half_b = oc.dot(r.direction);
         let c = oc.len_squared() - self.radius.powi(2);
 
-        let discriminant = half_b.powi(2) - a * c;
+        let discriminant = half_b.mul_add(half_b, -a * c);
+
         if discriminant < 0. {
             return None;
         }

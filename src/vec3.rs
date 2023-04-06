@@ -1,18 +1,33 @@
 use std::{
-    ops::{Add, Div, Mul, Neg, Sub},
-    simd::Simd,
+    ops::{Add, AddAssign, Div, Mul, Neg, Sub, SubAssign},
+    simd::{Simd, SimdFloat, StdFloat},
 };
 
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct Vec3 {
-    pub x: f32,
-    pub y: f32,
-    pub z: f32,
+    v: Simd<f32, 4>,
 }
 
 impl Vec3 {
     pub fn new(x: f32, y: f32, z: f32) -> Self {
-        Self { x, y, z }
+        Self {
+            v: Simd::from([x, y, z, 0.]),
+        }
+    }
+
+    #[inline]
+    pub fn x(&self) -> f32 {
+        self.v[0]
+    }
+
+    #[inline]
+    pub fn y(&self) -> f32 {
+        self.v[1]
+    }
+
+    #[inline]
+    pub fn z(&self) -> f32 {
+        self.v[2]
     }
 
     pub fn len(&self) -> f32 {
@@ -20,24 +35,50 @@ impl Vec3 {
     }
 
     pub fn len_squared(&self) -> f32 {
-        self.x.powi(2) + self.y.powi(2) + self.z.powi(2)
+        (self.v * self.v).reduce_sum()
     }
 
     pub fn dot(&self, other: Vec3) -> f32 {
-        let c = self.mul(other);
-        c.x + c.y + c.z
+        self.mul(other).v.reduce_sum()
     }
 
     pub fn cross(&self, other: Vec3) -> Self {
-        Self {
-            x: self.y * other.z - self.z * other.y,
-            y: self.z * other.x - self.x * other.z,
-            z: self.x * other.y - self.y * other.x,
-        }
+        let x = self.y() * other.z() - self.z() * other.y();
+        let y = self.z() * other.x() - self.x() * other.z();
+        let z = self.x() * other.y() - self.y() * other.x();
+
+        Self::new(x, y, z)
     }
 
     pub fn unit_vector(&self) -> Self {
         self.div(self.len())
+    }
+
+    pub fn clamp(&self, min: f32, max: f32) -> Self {
+        let min = Simd::from([min, min, min, min]);
+        let max = Simd::from([max, max, max, max]);
+
+        let v: Simd<f32, 4> = self.v.simd_clamp(min, max);
+
+        Self { v }
+    }
+
+    ///(self * a) + b
+    pub fn mul_add(&self, a: f32, b: f32) -> Self {
+        let a = Simd::from([a, a, a, 0.]);
+        let b = Simd::from([b, b, b, 0.]);
+
+        Self {
+            v: self.v.mul_add(a, b),
+        }
+    }
+
+    pub fn mul_add_vec(&self, a: f32, b: Self) -> Self {
+        let a = Simd::from([a, a, a, 0.]);
+
+        Self {
+            v: self.v.mul_add(a, b.v),
+        }
     }
 }
 
@@ -45,16 +86,15 @@ impl Add for Vec3 {
     type Output = Self;
 
     fn add(self, other: Self) -> Self {
-        let a = std::simd::Simd::from([self.x, self.y, self.z, 0.]);
-        let b = std::simd::Simd::from([other.x, other.y, other.z, 0.]);
-
-        let c: Simd<f32, 4> = a.add(b);
-
         Self {
-            x: c[0],
-            y: c[1],
-            z: c[2],
+            v: self.v.add(other.v),
         }
+    }
+}
+
+impl AddAssign for Vec3 {
+    fn add_assign(&mut self, other: Self) {
+        *self = *self + other;
     }
 }
 
@@ -62,16 +102,15 @@ impl Sub for Vec3 {
     type Output = Self;
 
     fn sub(self, other: Self) -> Self {
-        let a = std::simd::Simd::from([self.x, self.y, self.z, 0.]);
-        let b = std::simd::Simd::from([other.x, other.y, other.z, 0.]);
-
-        let c: Simd<f32, 4> = a.sub(b);
-
         Self {
-            x: c[0],
-            y: c[1],
-            z: c[2],
+            v: self.v.sub(other.v),
         }
+    }
+}
+
+impl SubAssign for Vec3 {
+    fn sub_assign(&mut self, other: Self) {
+        *self = *self - other;
     }
 }
 
@@ -79,15 +118,8 @@ impl Mul for Vec3 {
     type Output = Self;
 
     fn mul(self, other: Self) -> Self::Output {
-        let a = std::simd::Simd::from([self.x, self.y, self.z, 0.]);
-        let b = std::simd::Simd::from([other.x, other.y, other.z, 0.]);
-
-        let c: Simd<f32, 4> = a.mul(b);
-
         Self {
-            x: c[0],
-            y: c[1],
-            z: c[2],
+            v: self.v.mul(other.v),
         }
     }
 }
@@ -96,15 +128,10 @@ impl Mul<f32> for Vec3 {
     type Output = Self;
 
     fn mul(self, scalar: f32) -> Self::Output {
-        let a = std::simd::Simd::from([self.x, self.y, self.z, 0.]);
-        let b = std::simd::Simd::from([scalar, scalar, scalar, 0.]);
-
-        let c: Simd<f32, 4> = a.mul(b);
+        let other = Simd::from([scalar, scalar, scalar, 0.]);
 
         Self {
-            x: c[0],
-            y: c[1],
-            z: c[2],
+            v: self.v.mul(other),
         }
     }
 }
@@ -112,17 +139,12 @@ impl Mul<f32> for Vec3 {
 impl Div for Vec3 {
     type Output = Self;
 
-    fn div(self, other: Vec3) -> Self::Output {
-        let a = std::simd::Simd::from([self.x, self.y, self.z, 1.]);
-        let b = std::simd::Simd::from([other.x, other.y, other.z, 1.]);
+    fn div(self, mut other: Vec3) -> Self::Output {
+        other.v[3] = 1.;
+        let v = self.v.div(other.v);
+        other.v[3] = 0.;
 
-        let c: Simd<f32, 4> = a.div(b);
-
-        Self {
-            x: c[0],
-            y: c[1],
-            z: c[2],
-        }
+        Self { v }
     }
 }
 
@@ -130,15 +152,10 @@ impl Div<f32> for Vec3 {
     type Output = Self;
 
     fn div(self, scalar: f32) -> Self::Output {
-        let a = std::simd::Simd::from([self.x, self.y, self.z, 0.]);
-        let b = std::simd::Simd::from([scalar, scalar, scalar, 0.]);
-
-        let c: Simd<f32, 4> = a.div(b);
+        let other = Simd::from([scalar, scalar, scalar, 1.]);
 
         Self {
-            x: c[0],
-            y: c[1],
-            z: c[2],
+            v: self.v.div(other),
         }
     }
 }
@@ -146,15 +163,8 @@ impl Div<f32> for Vec3 {
 impl Neg for Vec3 {
     type Output = Self;
 
-    #[must_use = "operator returns a new vector without mutating the input"]
     fn neg(self) -> Self::Output {
-        let c = -std::simd::Simd::from([self.x, self.y, self.z, 0.]);
-
-        Self {
-            x: c[0],
-            y: c[1],
-            z: c[2],
-        }
+        Self { v: -self.v }
     }
 }
 

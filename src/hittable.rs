@@ -1,7 +1,8 @@
-use std::rc::Rc;
+use std::sync::Arc;
 
 use crate::{
     ray::{Point3, Ray},
+    sphere::Sphere,
     vec3::Vec3,
 };
 
@@ -36,14 +37,17 @@ pub trait Hittable {
     fn hit(&self, r: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord>;
 }
 
-#[derive(Default, Clone)]
+pub enum Obj {
+    Sphere(Sphere),
+}
+
+#[derive(Default)]
 pub struct HittableList {
-    // Dyn or an enum???
-    objects: Vec<Rc<dyn Hittable>>, // TODO shared_ptr =? or arc and do it multithread
+    objects: Vec<Arc<Obj>>,
 }
 
 impl HittableList {
-    pub fn add(&mut self, o: Rc<dyn Hittable>) {
+    pub fn add(&mut self, o: Arc<Obj>) {
         self.objects.push(o);
     }
 }
@@ -55,8 +59,11 @@ impl Hittable for HittableList {
         let mut hitted = false;
 
         for obj in self.objects.iter() {
-            // Rayon?
-            if let Some(hit) = obj.hit(r, t_min, closest_so_far) {
+            let possible_hit = match obj.as_ref() {
+                Obj::Sphere(s) => s.hit(r, t_min, closest_so_far),
+            };
+
+            if let Some(hit) = possible_hit {
                 closest_so_far = hit.t;
                 hit_record = hit;
                 hitted = true;
