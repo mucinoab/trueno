@@ -146,11 +146,14 @@ impl Div<f32> for Vec3 {
 impl Neg for Vec3 {
     type Output = Self;
 
+    #[must_use = "operator returns a new vector without mutating the input"]
     fn neg(self) -> Self::Output {
+        let c = -std::simd::Simd::from([self.x, self.y, self.z, 0.]);
+
         Self {
-            x: -self.x,
-            y: -self.y,
-            z: -self.z,
+            x: c[0],
+            y: c[1],
+            z: c[2],
         }
     }
 }

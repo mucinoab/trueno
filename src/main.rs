@@ -1,19 +1,28 @@
 #![feature(portable_simd)]
 
 mod color;
+mod hittable;
 mod ray;
+mod sphere;
 mod vec3;
 
-use std::{fs::File, io::BufWriter, io::Write, ops::Mul};
-
+use hittable::HittableList;
 use ray::{Point3, Ray};
+use sphere::Sphere;
 use vec3::Vec3;
+
+use std::{fs::File, io::BufWriter, io::Write, ops::Mul, rc::Rc};
 
 fn main() {
     // Image
     let aspect_ratio = 16. / 9.;
     let image_width = 400.;
     let image_height = image_width / aspect_ratio;
+
+    // World
+    let mut world: HittableList = HittableList::default();
+    world.add(Rc::new(Sphere::new(Point3::new(0., 0., -1.), 0.5)));
+    world.add(Rc::new(Sphere::new(Point3::new(0., -100.5, -1.), 100.0)));
 
     // Camera
     let viewport_height = 2.0;
@@ -42,7 +51,7 @@ fn main() {
                 lower_left_corner + horizontal.mul(u) + vertical.mul(v) - origin,
             );
 
-            r.color().write(&mut file);
+            r.color(&world).write(&mut file);
         }
     }
 

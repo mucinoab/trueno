@@ -1,6 +1,10 @@
-use crate::{color::Color, vec3::Vec3};
+use crate::{
+    color::Color,
+    hittable::{Hittable, HittableList},
+    vec3::Vec3,
+};
 
-use std::ops::Mul;
+use std::{f32::INFINITY, ops::Mul};
 
 pub type Point3 = Vec3;
 
@@ -29,34 +33,13 @@ impl Ray {
 }
 
 impl Ray {
-    pub fn color(&self) -> Color {
-        let t = self.hit_sphere(Point3::new(0., 0., -1.), 0.5);
-
-        if t > 0. {
-            let n = (self.at(t) - Vec3::new(0., 0., -1.)).unit_vector();
-            return (n + Vec3::new(1., 1., 1.)) * 0.5;
-        }
-
-        let unit_direction = self.direction.unit_vector();
-        let t = 0.5 * (unit_direction.y + 1.0);
-
-        Color::new(1.0, 1.0, 1.0).mul(1.0 - t) + Color::new(0.5, 0.7, 1.0).mul(t)
-    }
-
-    /// t2b⋅b+2tb⋅(A−C)+(A−C)⋅(A−C)−r2=0
-    fn hit_sphere(&self, center: Point3, radius: f32) -> f32 {
-        let oc = self.origin - center;
-        let a = self.direction.dot(self.direction);
-        let b = 2.0 * oc.dot(self.direction);
-        let c = oc.dot(oc) - radius.powi(2);
-
-        // General formula
-        let discriminant = b * b - 4. * a * c;
-
-        if discriminant < 0. {
-            -1.
+    pub fn color(&self, world: &HittableList) -> Color {
+        if let Some(hit) = world.hit(self, 0., INFINITY) {
+            (hit.normal + Color::new(1., 1., 1.)) * 0.5
         } else {
-            (-b - discriminant.sqrt()) / (2. * a)
+            let unit_direction = self.direction.unit_vector();
+            let t = (unit_direction.y + 1.) * 0.5;
+            Color::new(1., 1., 1.) * (1. - t) + Color::new(0.5, 0.7, 1.) * t
         }
     }
 }
