@@ -64,7 +64,7 @@ impl Vec3 {
     }
 
     ///(self * a) + b
-    pub fn mul_add(&self, a: f32, b: f32) -> Self {
+    pub fn _mul_add(&self, a: f32, b: f32) -> Self {
         let a = Simd::from([a, a, a, 0.]);
         let b = Simd::from([b, b, b, 0.]);
 
