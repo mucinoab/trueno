@@ -1,6 +1,7 @@
 use crate::{
     hittable::{HitRecord, Hittable},
     ray::{Point3, Ray},
+    vec3::Vec3,
 };
 
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
@@ -45,5 +46,15 @@ impl Hittable for Sphere {
         hr.set_face_normal(r);
 
         Some(hr)
+    }
+}
+
+pub fn random_in_unit_sphere() -> Vec3 {
+    loop {
+        let p = Vec3::random_in_range(-1., 1.);
+
+        if p.len_squared() < 1. {
+            return p;
+        }
     }
 }

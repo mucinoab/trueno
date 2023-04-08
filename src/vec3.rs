@@ -3,6 +3,8 @@ use std::{
     simd::{Simd, SimdFloat, StdFloat},
 };
 
+use fastrand::Rng;
+
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct Vec3 {
     v: Simd<f32, 4>,
@@ -10,6 +12,30 @@ pub struct Vec3 {
 
 impl Vec3 {
     pub fn new(x: f32, y: f32, z: f32) -> Self {
+        Self {
+            v: Simd::from([x, y, z, 0.]),
+        }
+    }
+
+    pub fn random() -> Self {
+        let rng = fastrand::Rng::new();
+
+        let x = rng.f32();
+        let y = rng.f32();
+        let z = rng.f32();
+
+        Self {
+            v: Simd::from([x, y, z, 0.]),
+        }
+    }
+
+    pub fn random_in_range(min: f32, max: f32) -> Self {
+        let rng = fastrand::Rng::new();
+
+        let x = random_f32(min, max, &rng);
+        let y = random_f32(min, max, &rng);
+        let z = random_f32(min, max, &rng);
+
         Self {
             v: Simd::from([x, y, z, 0.]),
         }
@@ -79,6 +105,10 @@ impl Vec3 {
         Self {
             v: self.v.mul_add(a, b.v),
         }
+    }
+
+    pub fn sqrt(&self) -> Self {
+        Self { v: self.v.sqrt() }
     }
 }
 
@@ -166,6 +196,10 @@ impl Neg for Vec3 {
     fn neg(self) -> Self::Output {
         Self { v: -self.v }
     }
+}
+
+fn random_f32(min: f32, max: f32, rng: &Rng) -> f32 {
+    min + (max - min) * rng.f32()
 }
 
 #[cfg(test)]

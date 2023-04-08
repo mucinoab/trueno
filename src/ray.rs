@@ -1,6 +1,7 @@
 use crate::{
     color::Color,
     hittable::{Hittable, HittableList},
+    sphere::random_in_unit_sphere,
     vec3::Vec3,
 };
 
@@ -33,9 +34,15 @@ impl Ray {
 }
 
 impl Ray {
-    pub fn color(&self, world: &HittableList) -> Color {
-        if let Some(hit) = world.hit(self, 0., INFINITY) {
-            (hit.normal + Color::new(1., 1., 1.)) * 0.5
+    pub fn color(&self, world: &HittableList, depth: u8) -> Color {
+        // If we've exceeded the ray bounce limit, no more light is gathered.
+        if depth <= 0 {
+            return Color::new(0., 0., 0.);
+        }
+
+        if let Some(hit) = world.hit(self, 0.001, INFINITY) {
+            let target = hit.point + hit.normal + random_in_unit_sphere();
+            Ray::new(hit.point, target - hit.point).color(world, depth - 1) * 0.5
         } else {
             let unit_direction = self.direction.unit_vector();
             let t = (unit_direction.y() + 1.) * 0.5;
