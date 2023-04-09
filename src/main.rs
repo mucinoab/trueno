@@ -3,6 +3,7 @@
 mod camera;
 mod color;
 mod hittable;
+mod material;
 mod ray;
 mod sphere;
 mod vec3;
@@ -10,6 +11,7 @@ mod vec3;
 use crate::{color::Color, hittable::Obj};
 use camera::Camera;
 use hittable::HittableList;
+use material::{Lambertian, Materials, Metal};
 use ray::Point3;
 use sphere::Sphere;
 
@@ -32,7 +34,7 @@ const IMAGE_WIDTH: f32 = 1920.0;
 const IMAGE_HEIGHT: f32 = IMAGE_WIDTH / ASPECT_RATIO;
 
 #[cfg(debug_assertions)]
-const SAMPLES_PER_PIXEL: usize = 64;
+const SAMPLES_PER_PIXEL: usize = 10;
 
 #[cfg(not(debug_assertions))]
 const SAMPLES_PER_PIXEL: usize = 128;
@@ -48,14 +50,33 @@ const MAX_DEPTH: u8 = 64;
 static WORLD: LazyLock<HittableList> = LazyLock::new(|| {
     let mut world = HittableList::default();
 
-    world.add(Arc::new(Obj::Sphere(Sphere::new(
-        Point3::new(0., 0., -1.),
-        0.5,
-    ))));
+    let ground = Materials::Lambertian(Lambertian::new(Color::new(0.8, 0.8, 0.0)));
+    let center = Materials::Lambertian(Lambertian::new(Color::new(0.7, 0.3, 0.3)));
+    let left = Materials::Metal(Metal::new(Color::new(0.8, 0.8, 0.8), 0.3));
+    let right = Materials::Metal(Metal::new(Color::new(0.8, 0.6, 0.2), 1.0));
 
     world.add(Arc::new(Obj::Sphere(Sphere::new(
         Point3::new(0., -100.5, -1.),
         100.0,
+        ground,
+    ))));
+
+    world.add(Arc::new(Obj::Sphere(Sphere::new(
+        Point3::new(0., 0., -1.),
+        0.5,
+        center,
+    ))));
+
+    world.add(Arc::new(Obj::Sphere(Sphere::new(
+        Point3::new(-1., 0., -1.),
+        0.5,
+        left,
+    ))));
+
+    world.add(Arc::new(Obj::Sphere(Sphere::new(
+        Point3::new(1., 0., -1.),
+        0.5,
+        right,
     ))));
 
     world

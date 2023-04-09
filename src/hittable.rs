@@ -1,26 +1,29 @@
 use std::sync::Arc;
 
 use crate::{
+    material::Materials,
     ray::{Point3, Ray},
     sphere::Sphere,
     vec3::Vec3,
 };
 
-#[derive(Debug, Default, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct HitRecord {
     pub point: Point3,
     pub normal: Vec3,
+    pub material: Arc<Materials>,
     pub t: f32,
     front_face: bool,
 }
 
 impl HitRecord {
-    pub fn new(point: Point3, normal: Vec3, t: f32) -> Self {
+    pub fn new(point: Point3, normal: Vec3, t: f32, m: Materials) -> Self {
         Self {
             point,
             normal,
             t,
             front_face: false,
+            material: Arc::new(m),
         }
     }
 
@@ -64,7 +67,7 @@ impl Hittable for HittableList {
 
             if let Some(hit) = possible_hit {
                 closest_so_far = hit.t;
-                hit_record = possible_hit;
+                hit_record = Some(hit);
             }
         }
 

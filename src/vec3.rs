@@ -17,7 +17,7 @@ impl Vec3 {
         }
     }
 
-    pub fn random() -> Self {
+    pub fn _random() -> Self {
         let rng = fastrand::Rng::new();
 
         let x = rng.f32();
@@ -27,6 +27,10 @@ impl Vec3 {
         Self {
             v: Simd::from([x, y, z, 0.]),
         }
+    }
+
+    pub fn _random_unit() -> Self {
+        Vec3::_random().unit_vector()
     }
 
     pub fn random_in_range(min: f32, max: f32) -> Self {
@@ -109,6 +113,16 @@ impl Vec3 {
 
     pub fn sqrt(&self) -> Self {
         Self { v: self.v.sqrt() }
+    }
+
+    pub fn near_zero(&self) -> bool {
+        // Return true if the vector is close to zero in all dimensions.
+        let s = 1e-8;
+        (self.x().abs() < s) && (self.y().abs() < s) && (self.z().abs() < s)
+    }
+
+    pub fn reflect(&self, n: Self) -> Self {
+        *self - n.mul(2.).mul(self.dot(n))
     }
 }
 

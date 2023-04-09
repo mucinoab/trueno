@@ -1,7 +1,7 @@
 use crate::{
     color::Color,
     hittable::{Hittable, HittableList},
-    sphere::random_in_unit_sphere,
+    material::{Material, Materials},
     vec3::Vec3,
 };
 
@@ -9,6 +9,7 @@ use std::{f32::INFINITY, ops::Mul};
 
 pub type Point3 = Vec3;
 
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct Ray {
     pub origin: Point3,
     pub direction: Vec3,
@@ -36,13 +37,19 @@ impl Ray {
 impl Ray {
     pub fn color(&self, world: &HittableList, depth: u8) -> Color {
         // If we've exceeded the ray bounce limit, no more light is gathered.
-        if depth <= 0 {
+        if depth == 0 {
             return Color::new(0., 0., 0.);
         }
 
         if let Some(hit) = world.hit(self, 0.001, INFINITY) {
-            let target = hit.point + hit.normal + random_in_unit_sphere();
-            Ray::new(hit.point, target - hit.point).color(world, depth - 1) * 0.5
+            if let Some((scattered, attenuation)) = match hit.material.as_ref() {
+                Materials::Lambertian(l) => l.scatter(self, hit),
+                Materials::Metal(m) => m.scatter(self, hit),
+            } {
+                attenuation * scattered.color(world, depth - 1)
+            } else {
+                Color::default()
+            }
         } else {
             let unit_direction = self.direction.unit_vector();
             let t = (unit_direction.y() + 1.) * 0.5;
