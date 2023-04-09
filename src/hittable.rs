@@ -13,7 +13,7 @@ pub struct HitRecord {
     pub normal: Vec3,
     pub material: Arc<Materials>,
     pub t: f32,
-    front_face: bool,
+    pub front_face: bool,
 }
 
 impl HitRecord {

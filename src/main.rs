@@ -8,10 +8,10 @@ mod ray;
 mod sphere;
 mod vec3;
 
-use crate::{color::Color, hittable::Obj};
+use crate::{color::Color, hittable::Obj, vec3::Vec3};
 use camera::Camera;
 use hittable::HittableList;
-use material::{Lambertian, Materials, Metal};
+use material::{Dielectric, Lambertian, Materials, Metal};
 use ray::Point3;
 use sphere::Sphere;
 
@@ -34,10 +34,10 @@ const IMAGE_WIDTH: f32 = 1920.0;
 const IMAGE_HEIGHT: f32 = IMAGE_WIDTH / ASPECT_RATIO;
 
 #[cfg(debug_assertions)]
-const SAMPLES_PER_PIXEL: usize = 10;
+const SAMPLES_PER_PIXEL: usize = 16;
 
 #[cfg(not(debug_assertions))]
-const SAMPLES_PER_PIXEL: usize = 128;
+const SAMPLES_PER_PIXEL: usize = 64;
 
 const MULTIPLICATIVE_INVERSE_OF_SAMPLES_PER_PIXEL: f32 = 1. / SAMPLES_PER_PIXEL as f32;
 
@@ -45,15 +45,15 @@ const MULTIPLICATIVE_INVERSE_OF_SAMPLES_PER_PIXEL: f32 = 1. / SAMPLES_PER_PIXEL 
 const MAX_DEPTH: u8 = 16;
 
 #[cfg(not(debug_assertions))]
-const MAX_DEPTH: u8 = 64;
+const MAX_DEPTH: u8 = 32;
 
 static WORLD: LazyLock<HittableList> = LazyLock::new(|| {
     let mut world = HittableList::default();
 
     let ground = Materials::Lambertian(Lambertian::new(Color::new(0.8, 0.8, 0.0)));
-    let center = Materials::Lambertian(Lambertian::new(Color::new(0.7, 0.3, 0.3)));
-    let left = Materials::Metal(Metal::new(Color::new(0.8, 0.8, 0.8), 0.3));
-    let right = Materials::Metal(Metal::new(Color::new(0.8, 0.6, 0.2), 1.0));
+    let center = Materials::Lambertian(Lambertian::new(Color::new(0.1, 0.2, 0.5)));
+    let left = Materials::Dielectric(Dielectric::new(1.5));
+    let right = Materials::Metal(Metal::new(Color::new(0.8, 0.6, 0.2), 0.0));
 
     world.add(Arc::new(Obj::Sphere(Sphere::new(
         Point3::new(0., -100.5, -1.),
@@ -74,6 +74,12 @@ static WORLD: LazyLock<HittableList> = LazyLock::new(|| {
     ))));
 
     world.add(Arc::new(Obj::Sphere(Sphere::new(
+        Point3::new(-1., 0., -1.),
+        -0.485,
+        left,
+    ))));
+
+    world.add(Arc::new(Obj::Sphere(Sphere::new(
         Point3::new(1., 0., -1.),
         0.5,
         right,
@@ -83,10 +89,13 @@ static WORLD: LazyLock<HittableList> = LazyLock::new(|| {
 });
 
 fn main() {
-    // Image
-
     // camera
-    let camera = Camera::new();
+    let camera = Camera::new(
+        Point3::new(-2., 2., 1.),
+        Point3::new(0., 0., -1.),
+        Vec3::new(0., 1., 0.),
+        20.,
+    );
 
     eprintln!(
         "Pixels to generate:{}x{} =  {}",
@@ -109,8 +118,8 @@ fn main() {
             let y = y as f32;
 
             for _ in 0..SAMPLES_PER_PIXEL {
-                let u = (y + r.f32()) / IMAGE_WIDTH;
-                let v = (x + r.f32()) / IMAGE_HEIGHT;
+                let u = (y + r.f32()) / (IMAGE_WIDTH - 1.0);
+                let v = (x + r.f32()) / (IMAGE_HEIGHT - 1.0);
                 let r = camera.ger_ray(u, v);
 
                 pixel_color += r.color(&WORLD, MAX_DEPTH);

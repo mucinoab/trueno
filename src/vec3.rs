@@ -17,22 +17,6 @@ impl Vec3 {
         }
     }
 
-    pub fn _random() -> Self {
-        let rng = fastrand::Rng::new();
-
-        let x = rng.f32();
-        let y = rng.f32();
-        let z = rng.f32();
-
-        Self {
-            v: Simd::from([x, y, z, 0.]),
-        }
-    }
-
-    pub fn _random_unit() -> Self {
-        Vec3::_random().unit_vector()
-    }
-
     pub fn random_in_range(min: f32, max: f32) -> Self {
         let rng = fastrand::Rng::new();
 
@@ -94,15 +78,6 @@ impl Vec3 {
     }
 
     ///(self * a) + b
-    pub fn _mul_add(&self, a: f32, b: f32) -> Self {
-        let a = Simd::from([a, a, a, 0.]);
-        let b = Simd::from([b, b, b, 0.]);
-
-        Self {
-            v: self.v.mul_add(a, b),
-        }
-    }
-
     pub fn mul_add_vec(&self, a: f32, b: Self) -> Self {
         let a = Simd::from([a, a, a, 0.]);
 
@@ -124,6 +99,17 @@ impl Vec3 {
     pub fn reflect(&self, n: Self) -> Self {
         *self - n.mul(2.).mul(self.dot(n))
     }
+
+    /// Solve Snell’s law
+    pub fn refract(&self, n: Vec3, etai_over_etat: f32) -> Self {
+        let cos_theta = (-*self).dot(n).min(1.0);
+
+        let r_out_perp = etai_over_etat * (*self + cos_theta * n);
+
+        let r_out_parallel = -(1.0 - r_out_perp.len_squared()).abs().sqrt() * n;
+
+        r_out_perp + r_out_parallel
+    }
 }
 
 impl Add for Vec3 {
@@ -132,6 +118,26 @@ impl Add for Vec3 {
     fn add(self, other: Self) -> Self {
         Self {
             v: self.v.add(other.v),
+        }
+    }
+}
+
+impl Add<Vec3> for f32 {
+    type Output = Vec3;
+
+    fn add(self, rhs: Vec3) -> Self::Output {
+        rhs.add(self)
+    }
+}
+
+impl Add<f32> for Vec3 {
+    type Output = Self;
+
+    fn add(self, scalar: f32) -> Self::Output {
+        let other = Simd::from([scalar, scalar, scalar, 0.]);
+
+        Self {
+            v: self.v.mul(other),
         }
     }
 }
@@ -165,6 +171,14 @@ impl Mul for Vec3 {
         Self {
             v: self.v.mul(other.v),
         }
+    }
+}
+
+impl Mul<Vec3> for f32 {
+    type Output = Vec3;
+
+    fn mul(self, rhs: Vec3) -> Self::Output {
+        rhs.mul(self)
     }
 }
 
@@ -287,8 +301,10 @@ mod tests {
     #[test]
     fn len() {
         let a = Vec3::new(1., -3., 4.);
-
         assert_eq!(a.len(), (26.0_f32).sqrt());
+
+        let a = Vec3::new(1., -3., 4.);
+        assert_eq!(a.len_squared(), 26.0_f32);
     }
 
     #[test]

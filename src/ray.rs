@@ -45,6 +45,7 @@ impl Ray {
             if let Some((scattered, attenuation)) = match hit.material.as_ref() {
                 Materials::Lambertian(l) => l.scatter(self, hit),
                 Materials::Metal(m) => m.scatter(self, hit),
+                Materials::Dielectric(d) => d.scatter(self, hit),
             } {
                 attenuation * scattered.color(world, depth - 1)
             } else {
