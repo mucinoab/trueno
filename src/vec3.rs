@@ -17,6 +17,18 @@ impl Vec3 {
         }
     }
 
+    pub fn random() -> Self {
+        let rng = fastrand::Rng::new();
+
+        let x = rng.f32();
+        let y = rng.f32();
+        let z = rng.f32();
+
+        Self {
+            v: Simd::from([x, y, z, 0.]),
+        }
+    }
+
     pub fn random_in_range(min: f32, max: f32) -> Self {
         let rng = fastrand::Rng::new();
 
@@ -26,6 +38,17 @@ impl Vec3 {
 
         Self {
             v: Simd::from([x, y, z, 0.]),
+        }
+    }
+
+    pub fn random_in_unit_disk() -> Self {
+        let rng = fastrand::Rng::new();
+
+        loop {
+            let p = Vec3::new(random_f32(-1., 1., &rng), random_f32(-1., 1., &rng), 0.);
+            if p.len_squared() < 1. {
+                return p;
+            }
         }
     }
 
@@ -226,7 +249,7 @@ impl Neg for Vec3 {
     }
 }
 
-fn random_f32(min: f32, max: f32, rng: &Rng) -> f32 {
+pub fn random_f32(min: f32, max: f32, rng: &Rng) -> f32 {
     min + (max - min) * rng.f32()
 }
 

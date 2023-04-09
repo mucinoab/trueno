@@ -42,7 +42,7 @@ impl Ray {
         }
 
         if let Some(hit) = world.hit(self, 0.001, INFINITY) {
-            if let Some((scattered, attenuation)) = match hit.material.as_ref() {
+            if let Some((scattered, attenuation)) = match hit.material {
                 Materials::Lambertian(l) => l.scatter(self, hit),
                 Materials::Metal(m) => m.scatter(self, hit),
                 Materials::Dielectric(d) => d.scatter(self, hit),

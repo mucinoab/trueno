@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use crate::{
     material::Materials,
     ray::{Point3, Ray},
@@ -11,7 +9,7 @@ use crate::{
 pub struct HitRecord {
     pub point: Point3,
     pub normal: Vec3,
-    pub material: Arc<Materials>,
+    pub material: Materials,
     pub t: f32,
     pub front_face: bool,
 }
@@ -23,7 +21,7 @@ impl HitRecord {
             normal,
             t,
             front_face: false,
-            material: Arc::new(m),
+            material: m,
         }
     }
 
@@ -40,17 +38,13 @@ pub trait Hittable {
     fn hit(&self, r: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord>;
 }
 
-pub enum Obj {
-    Sphere(Sphere),
-}
-
 #[derive(Default)]
 pub struct HittableList {
-    objects: Vec<Arc<Obj>>,
+    objects: Vec<Sphere>,
 }
 
 impl HittableList {
-    pub fn add(&mut self, o: Arc<Obj>) {
+    pub fn add(&mut self, o: Sphere) {
         self.objects.push(o);
     }
 }
@@ -60,16 +54,12 @@ impl Hittable for HittableList {
         let mut hit_record = None;
         let mut closest_so_far = t_max;
 
-        for obj in self.objects.iter() {
-            let possible_hit = match obj.as_ref() {
-                Obj::Sphere(s) => s.hit(r, t_min, closest_so_far),
-            };
-
-            if let Some(hit) = possible_hit {
+        self.objects.iter().for_each(|s| {
+            if let Some(hit) = s.hit(r, t_min, closest_so_far) {
                 closest_so_far = hit.t;
                 hit_record = Some(hit);
             }
-        }
+        });
 
         hit_record
     }

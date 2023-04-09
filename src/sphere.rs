@@ -5,13 +5,11 @@ use crate::{
     vec3::Vec3,
 };
 
-use std::sync::Arc;
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct Sphere {
     center: Point3,
     radius: f32,
-    material: Arc<Materials>,
+    material: Materials,
 }
 
 impl Sphere {
@@ -19,7 +17,7 @@ impl Sphere {
         Self {
             center,
             radius,
-            material: Arc::new(m),
+            material: m,
         }
     }
 }
@@ -54,7 +52,7 @@ impl Hittable for Sphere {
             point,
             (point - self.center) / self.radius,
             root,
-            *self.material,
+            self.material,
         );
         hr.set_face_normal(r);
 
