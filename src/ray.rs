@@ -1,8 +1,7 @@
 use crate::{
-    color::Color,
     hittable::{Hittable, HittableList},
     material::{Material, Materials},
-    vec3::Vec3,
+    vec3::{Color, Vec3},
 };
 
 use std::{f32::INFINITY, ops::Mul};

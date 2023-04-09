@@ -1,20 +1,18 @@
 #![feature(portable_simd, lazy_cell)]
 
 mod camera;
-mod color;
 mod hittable;
 mod material;
 mod ray;
 mod sphere;
 mod vec3;
 
-use crate::color::Color;
 use camera::Camera;
 use hittable::HittableList;
 use material::{Dielectric, Lambertian, Materials, Metal};
 use ray::Point3;
 use sphere::Sphere;
-use vec3::Vec3;
+use vec3::{Color, Vec3};
 
 use std::{fs::File, io::Write, sync::LazyLock};
 

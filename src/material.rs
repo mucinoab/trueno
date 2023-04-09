@@ -1,8 +1,8 @@
 use crate::{
-    color::Color,
     hittable::HitRecord,
     ray::Ray,
     sphere::{random_in_unit_sphere, random_unit_vector},
+    vec3::Color,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq)]

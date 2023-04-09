@@ -5,6 +5,8 @@ use std::{
 
 use fastrand::Rng;
 
+pub type Color = Vec3;
+
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct Vec3 {
     v: Simd<f32, 4>,
